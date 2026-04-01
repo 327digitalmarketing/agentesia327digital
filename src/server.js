@@ -13,6 +13,10 @@ app.use('/api/agent', require('./routes/agent'));
 app.use('/api/client', require('./routes/client'));
 app.use('/api/webhook', require('./routes/webhook'));
 
+// Serve static files (widget)
+const path = require('path');
+app.use(express.static(path.join(__dirname, '../public')));
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
