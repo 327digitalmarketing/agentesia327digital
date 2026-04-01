@@ -10,11 +10,20 @@ app.use(cors());
 app.use(express.json());
 
 // Servir archivos estáticos del widget
-app.use(express.static(path.join(__dirname, 'public')));
+const publicPath = path.join(__dirname, 'public');
+app.use(express.static(publicPath));
 
-// Endpoint especial para chat-iframe.html
+// Endpoints especiales para archivos del widget
 app.get('/chat-iframe.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'chat-iframe.html'));
+  res.sendFile(path.join(publicPath, 'chat-iframe.html'));
+});
+
+app.get('/chat-widget.js', (req, res) => {
+  res.sendFile(path.join(publicPath, 'chat-widget.js'));
+});
+
+app.get('/chat-styles.css', (req, res) => {
+  res.sendFile(path.join(publicPath, 'chat-styles.css'));
 });
 
 // Routes
