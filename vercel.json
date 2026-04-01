@@ -8,6 +8,26 @@
   ],
   "routes": [
     {
+      "src": "/chat-widget.js",
+      "dest": "src/server.js"
+    },
+    {
+      "src": "/chat-iframe.html",
+      "dest": "src/server.js"
+    },
+    {
+      "src": "/chat-styles.css",
+      "dest": "src/server.js"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "src/server.js"
+    },
+    {
+      "src": "/health",
+      "dest": "src/server.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "src/server.js"
     }
