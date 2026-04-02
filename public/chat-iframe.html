@@ -743,9 +743,13 @@ function addAriaBubble(html, rawText) {
         <span class="bubble-time">${ts()}</span>
       </div>
     </div>`);
-  row.querySelector(`#btn-${msgId}`).dataset.text = rawText || html.replace(/<[^>]*>/g,'');
+  const btn = row.querySelector(`#btn-${msgId}`);
+  btn.dataset.text = rawText || html.replace(/<[^>]*>/g,'');
   document.getElementById('messages').appendChild(row);
   scrollDown();
+
+  // Auto-reproducir voz al aparecer la respuesta
+  if (rawText) setTimeout(() => speakText(msgId), 300);
 }
 
 let currentAudio = null;
