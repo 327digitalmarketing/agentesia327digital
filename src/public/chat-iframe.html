@@ -724,14 +724,73 @@ function addUserBubble(text) {
   scrollDown();
 }
 
-function addAriaBubble(html) {
+function addAriaBubble(html, rawText) {
+  const msgId = 'msg-' + Date.now();
   const row = make(`
     <div class="msg-row">
       <div class="msg-avatar aria">🦷</div>
-      <div class="bubble aria">${html}<span class="bubble-time">${ts()}</span></div>
+      <div class="bubble aria">
+        ${html}
+        <div style="margin-top:.5rem;display:flex;align-items:center;gap:.4rem;">
+          <button id="btn-${msgId}" onclick="speakText('${msgId}')" title="Escuchar" style="
+            background:none;border:1px solid rgba(26,122,138,.25);border-radius:100px;
+            color:var(--teal);font-size:.7rem;padding:.2rem .6rem;cursor:pointer;
+            display:inline-flex;align-items:center;gap:.3rem;transition:all .2s;">
+            🔊 Escuchar
+          </button>
+          <audio id="audio-${msgId}" style="display:none;"></audio>
+        </div>
+        <span class="bubble-time">${ts()}</span>
+      </div>
     </div>`);
+  row.querySelector(`#btn-${msgId}`).dataset.text = rawText || html.replace(/<[^>]*>/g,'');
   document.getElementById('messages').appendChild(row);
   scrollDown();
+}
+
+let currentAudio = null;
+
+async function speakText(msgId) {
+  const btn   = document.getElementById('btn-' + msgId);
+  const audio = document.getElementById('audio-' + msgId);
+  const text  = btn.dataset.text.slice(0, 800); // max chars
+
+  // Si ya está sonando, detener
+  if (currentAudio && !currentAudio.paused) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+    if (currentAudio === audio) { btn.textContent = '🔊 Escuchar'; return; }
+  }
+
+  // Detectar idioma activo
+  const activeLang = document.querySelector('#top-lang-bar .lang-btn.active');
+  const langLabel  = activeLang ? activeLang.textContent.trim() : '🌐 Auto';
+  const langMap    = { '🇪🇸 ES': 'es', '🇺🇸 EN': 'en', '🇧🇷 PT': 'pt', '🇫🇷 FR': 'fr', '🇸🇦 AR': 'ar' };
+  const lang       = langMap[langLabel] || 'la'; // 'la' = latam neutro por defecto
+
+  btn.textContent = '⏳ Cargando…';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, lang })
+    });
+
+    if (!res.ok) throw new Error('TTS error');
+
+    const blob = await res.blob();
+    audio.src  = URL.createObjectURL(blob);
+    audio.play();
+    currentAudio = audio;
+    btn.textContent = '🔊 Escuchar';
+    btn.disabled = false;
+    audio.onended = () => { btn.textContent = '🔊 Escuchar'; };
+  } catch (e) {
+    btn.textContent = '🔊 Escuchar';
+    btn.disabled = false;
+  }
 }
 
 let typingEl = null;
@@ -788,9 +847,9 @@ async function callProxy(userMessage) {
              📅 Abrir formulario de cita
            </button>
          </div>`;
-      addAriaBubble(html);
+      addAriaBubble(html, clean);
     } else {
-      addAriaBubble(md(reply));
+      addAriaBubble(md(reply), reply);
     }
   } catch (err) {
     hideTyping();
