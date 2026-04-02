@@ -704,8 +704,20 @@ async function callProxy(userMessage) {
 
     if (reply.includes('OPEN_APPOINTMENT_MODAL')) {
       const clean = reply.replace('OPEN_APPOINTMENT_MODAL', '').trim();
-      if (clean) addAriaBubble(md(clean));
-      setTimeout(openModal, 4000);
+      const html = (clean ? md(clean) : '') +
+        `<div style="margin-top:.75rem;">
+           <button onclick="openModal()" style="
+             background:linear-gradient(135deg,#1A7A8A,#22A0B2);
+             border:none; border-radius:100px; color:#fff;
+             font-family:inherit; font-size:.82rem; font-weight:600;
+             padding:.55rem 1.2rem; cursor:pointer;
+             box-shadow:0 3px 12px rgba(26,122,138,.35);
+             display:inline-flex; align-items:center; gap:.4rem;
+             transition:transform .15s;">
+             📅 Abrir formulario de cita
+           </button>
+         </div>`;
+      addAriaBubble(html);
     } else {
       addAriaBubble(md(reply));
     }
