@@ -39,6 +39,13 @@
     background: var(--deep); color: var(--text); overflow: hidden;
   }
 
+  /* Ocultar panel izquierdo en pantallas menores a 1100px */
+  @media (max-width:1100px) {
+    #app { grid-template-columns: 1fr !important; }
+    .left { display: none !important; }
+    .lang-grid-mobile { display: flex !important; }
+  }
+
   @keyframes fadeUp  { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:none; } }
   @keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
   @keyframes pulse   { 0%,100% { opacity:1; } 50% { opacity:.4; } }
