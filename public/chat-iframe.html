@@ -823,11 +823,16 @@ async function callProxy(userMessage) {
     hideTyping();
 
     if (data.error) {
-      addAriaBubble(`❌ ${data.error.message || 'Error de conexión. Intenta de nuevo.'}`);
+      const msg = typeof data.error === 'string' ? data.error : (data.error.message || 'Error desconocido');
+      addAriaBubble(`❌ ${msg}`);
       return;
     }
 
-    const reply = data.content[0].text;
+    const reply = data.content?.[0]?.text || '';
+    if (!reply) {
+      addAriaBubble('❌ No obtuve respuesta. Inténtalo de nuevo.');
+      return;
+    }
     conversationHistory.push({ role: 'assistant', content: reply });
 
     if (reply.includes('OPEN_APPOINTMENT_MODAL')) {
@@ -851,7 +856,8 @@ async function callProxy(userMessage) {
     }
   } catch (err) {
     hideTyping();
-    addAriaBubble('❌ No pude conectar con el servidor. Comprueba que está en marcha e inténtalo de nuevo.');
+    console.error('callProxy error:', err);
+    addAriaBubble('❌ No pude conectar con el servidor. Inténtalo de nuevo.');
   }
 }
 
