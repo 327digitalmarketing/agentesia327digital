@@ -407,7 +407,7 @@
 
     <div class="status-pill">
       <div class="status-dot"></div>
-      <span class="status-text">Aria en línea · 12+ idiomas</span>
+      <span class="status-text">Aria en línea</span>
     </div>
 
     <div class="hero">
@@ -646,13 +646,139 @@ REGLAS DE RESPUESTA — MUY IMPORTANTE:
 let userName = '';
 let conversationHistory = [];
 
+/* ─── Translations ────────────────────────────────────────── */
+const T = {
+  es: {
+    statusText:   'Aria en línea',
+    heroTag:      '✦ Más de 30 años cuidando tu sonrisa',
+    heroH1:       'Tu Cita Dental<br><em>Perfecta Empieza</em><br>Aquí.',
+    heroP:        'Conoce a Aria, tu asistente dental de IA. Te atiende en tu idioma, resuelve tus dudas y te ayuda a reservar la cita que necesitas.',
+    statLbl:      ['Años de experiencia','Reseñas verificadas','Certificación AENOR'],
+    meetTitle:    'Habla con Aria, Tu Asistente Dental',
+    firstName:    'Tu nombre',
+    phonePh:      'Teléfono',
+    emailPh:      'Correo electrónico',
+    btnMeet:      'Habla con Aria Ahora →',
+    terms:        'Al continuar aceptas recibir información de la clínica.<br>Tu información es privada y nunca se comparte ni se vende.',
+    headerRole:   'Asistente Dental · Clínica Dental Asensio',
+    detecting:    'detectando ubicación…',
+    welcomeTitle: '¡Bienvenido/a a Clínica Dental Asensio! 😊',
+    welcomeSub:   'Aria te atiende en tu idioma. Primera visita gratuita · Urgencias 24h · Certificación ISO AENOR',
+    aiBadge:      '✦ IA en vivo',
+    langNotice:   '🌐 Aria responde automáticamente en tu idioma',
+    chipsLabel:   'Consultas frecuentes',
+    chips: [
+      { label:'📅 Pedir cita',   msg:'Quiero pedir una cita' },
+      { label:'🦷 Tratamientos', msg:'¿Cuáles son vuestros tratamientos?' },
+      { label:'💰 Precios',      msg:'¿Cuáles son los precios?' },
+      { label:'🚨 Urgencia',     msg:'Tengo una urgencia dental' },
+      { label:'🏥 Seguros',      msg:'¿Aceptáis mi seguro médico?' },
+      { label:'📍 Ubicación',    msg:null },
+    ],
+    locationMsg:  (city) => city ? `Estoy en ${city}. ¿Dónde está la clínica y cómo llego?` : '¿Dónde estáis y cuál es vuestro horario?',
+    inputPh:      'Escribe tu consulta aquí…',
+    modalTitle:   'Reservar tu Cita 📅',
+    modalSub:     'Confirmaremos en menos de 2 horas al teléfono o correo que nos indiques.',
+    labels:       ['Servicio','Fecha preferida','Horario preferido','Tus datos de contacto'],
+    services:     ['1ª Visita Gratis','Limpieza','Blanqueamiento','Ortodoncia','Implantes','Urgencia'],
+    svcIcons:     ['🔍','🦷','✨','🔧','💎','🚨'],
+    modalName:    'Nombre y apellidos',
+    modalPhone:   'Teléfono',
+    modalEmail:   'Correo electrónico (para confirmación)',
+    btnConfirm:   '✓ Confirmar mi Cita',
+    welcomeMsg:   '¡Hola! Soy <strong>Aria</strong>, tu asistente de la Clínica Dental Asensio 😊<br><br>Puedo ayudarte con <strong>citas, tratamientos, precios y urgencias</strong>. Recuerda que la <strong>primera visita es gratuita</strong> e incluye revisión completa, scanner 3D y radiografía digital.<br><br>¿En qué puedo ayudarte hoy?',
+  },
+  en: {
+    statusText:   'Aria online',
+    heroTag:      '✦ Over 30 years caring for your smile',
+    heroH1:       'Your Perfect<br><em>Dental Appointment</em><br>Starts Here.',
+    heroP:        'Meet Aria, your AI dental assistant. She helps you in your language, answers your questions and books the appointment you need.',
+    statLbl:      ['Years of experience','Verified reviews','AENOR Certification'],
+    meetTitle:    'Talk to Aria, Your Dental Assistant',
+    firstName:    'Your name',
+    phonePh:      'Phone',
+    emailPh:      'Email',
+    btnMeet:      'Talk to Aria Now →',
+    terms:        'By continuing you agree to receive information from the clinic.<br>Your information is private and is never shared or sold.',
+    headerRole:   'Dental Assistant · Clínica Dental Asensio',
+    detecting:    'detecting location…',
+    welcomeTitle: 'Welcome to Clínica Dental Asensio! 😊',
+    welcomeSub:   'Aria assists you in your language. First visit free · 24h Emergencies · ISO AENOR Certification',
+    aiBadge:      '✦ Live AI',
+    langNotice:   '🌐 Aria responds automatically in your language',
+    chipsLabel:   'Frequent queries',
+    chips: [
+      { label:'📅 Book appointment', msg:'I want to book an appointment' },
+      { label:'🦷 Treatments',       msg:'What treatments do you offer?' },
+      { label:'💰 Prices',           msg:'What are your prices?' },
+      { label:'🚨 Emergency',        msg:'I have a dental emergency' },
+      { label:'🏥 Insurance',        msg:'Do you accept my health insurance?' },
+      { label:'📍 Location',         msg:null },
+    ],
+    locationMsg:  (city) => city ? `I'm in ${city}. Where is your clinic and how do I get there?` : 'Where are you located and what are your hours?',
+    inputPh:      'Type your question here…',
+    modalTitle:   'Book your Appointment 📅',
+    modalSub:     'We will confirm within 2 hours by phone or email.',
+    labels:       ['Service','Preferred date','Preferred time','Your contact details'],
+    services:     ['1st Visit Free','Cleaning','Whitening','Orthodontics','Implants','Emergency'],
+    svcIcons:     ['🔍','🦷','✨','🔧','💎','🚨'],
+    modalName:    'Full name',
+    modalPhone:   'Phone',
+    modalEmail:   'Email (for confirmation)',
+    btnConfirm:   '✓ Confirm my Appointment',
+    welcomeMsg:   'Hi! I\'m <strong>Aria</strong>, your assistant at Clínica Dental Asensio 😊<br><br>I can help you with <strong>appointments, treatments, prices and emergencies</strong>. Remember that the <strong>first visit is free</strong> and includes a full check-up, 3D scanner and digital X-ray.<br><br>How can I help you today?',
+  }
+};
+
 /* ─── UI helpers ──────────────────────────────────────── */
 let currentLang = 'es';
+let userCity = '';
+
+function applyLang(lang) {
+  const t = T[lang];
+  document.querySelector('.status-text').textContent = t.statusText;
+  document.querySelector('.hero-tag').textContent    = t.heroTag;
+  document.querySelector('.hero h1').innerHTML       = t.heroH1;
+  document.querySelector('.hero p').textContent      = t.heroP;
+  document.querySelectorAll('.stat-lbl').forEach((el,i) => { if (t.statLbl[i]) el.textContent = t.statLbl[i]; });
+  document.querySelector('.meet-title').textContent  = t.meetTitle;
+  document.getElementById('first-name').placeholder  = t.firstName;
+  document.getElementById('phone').placeholder       = t.phonePh;
+  document.getElementById('email').placeholder       = t.emailPh;
+  document.querySelector('.btn-meet').textContent    = t.btnMeet;
+  document.querySelector('.terms-note').innerHTML    = t.terms;
+  document.querySelector('.header-role').innerHTML   = t.headerRole + ' · <span id="user-city">' + (userCity || t.detecting) + '</span>';
+  document.querySelector('.welcome-banner-title').textContent = t.welcomeTitle;
+  document.querySelector('.welcome-banner-sub').textContent   = t.welcomeSub;
+  document.querySelector('.ai-badge').textContent             = t.aiBadge;
+  document.querySelector('.lang-notice').textContent          = t.langNotice;
+  document.querySelector('.chips-label').textContent          = t.chipsLabel;
+  const chipEls = document.querySelectorAll('.chip');
+  t.chips.forEach((c,i) => {
+    if (!chipEls[i]) return;
+    chipEls[i].innerHTML = c.label;
+    const msg = c.msg !== null ? c.msg : t.locationMsg(userCity);
+    chipEls[i].onclick = () => sendChip(msg);
+  });
+  document.getElementById('chat-input').placeholder = t.inputPh;
+  document.querySelector('.modal-title').textContent = t.modalTitle;
+  document.querySelector('.modal-sub').textContent   = t.modalSub;
+  document.querySelectorAll('.modal-label').forEach((el,i) => { if (t.labels[i]) el.textContent = t.labels[i]; });
+  document.querySelectorAll('.service-opt').forEach((el,i) => {
+    if (t.services[i]) el.innerHTML = `<span class="icon">${t.svcIcons[i]}</span>${t.services[i]}`;
+  });
+  document.getElementById('modal-name').placeholder  = t.modalName;
+  document.getElementById('modal-phone').placeholder = t.modalPhone;
+  document.getElementById('modal-email').placeholder = t.modalEmail;
+  document.querySelector('.btn-confirm').textContent  = t.btnConfirm;
+  const wb = document.querySelector('#welcome-msg .bubble.aria');
+  if (wb) wb.innerHTML = t.welcomeMsg + '<span class="bubble-time">' + ts() + '</span>';
+}
 
 function toggleLang() {
   currentLang = currentLang === 'es' ? 'en' : 'es';
-  const btn = document.getElementById('lang-toggle');
-  btn.textContent = currentLang === 'es' ? '🇪🇸 ES' : '🇺🇸 EN';
+  document.getElementById('lang-toggle').textContent = currentLang === 'es' ? '🇪🇸 ES' : '🇺🇸 EN';
+  applyLang(currentLang);
 }
 
 function setLang(btn) {
@@ -660,24 +786,17 @@ function setLang(btn) {
   btn.classList.add('active');
 }
 
-function setLangAll(btn) {
-  // Sincroniza ambas barras de idioma
-  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-  const label = btn.textContent.trim();
-  document.querySelectorAll('.lang-btn').forEach(b => {
-    if (b.textContent.trim() === label) b.classList.add('active');
-  });
-}
-
 // Detectar ciudad por IP
 fetch('https://ipapi.co/json/')
   .then(r => r.json())
   .then(d => {
-    const city = d.city || d.country_name || '';
-    if (city) document.getElementById('user-city').textContent = city;
+    userCity = d.city || d.country_name || '';
+    const el = document.getElementById('user-city');
+    if (el && userCity) el.textContent = userCity;
   })
   .catch(() => {
-    document.getElementById('user-city').textContent = 'Valencia';
+    const el = document.getElementById('user-city');
+    if (el) el.textContent = 'Valencia';
   });
 
 function startChat() {
