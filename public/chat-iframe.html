@@ -466,6 +466,14 @@
         <div class="badge">🔊</div>
       </div>
       <div class="header-actions">
+        <button id="lang-toggle" onclick="toggleLang()" title="Cambiar idioma" style="
+          background:var(--mint); border:1px solid rgba(26,122,138,.25);
+          border-radius:100px; color:var(--teal);
+          font-family:var(--font-body); font-size:.72rem; font-weight:600;
+          padding:.3rem .75rem; cursor:pointer; transition:all .2s;
+          display:flex; align-items:center; gap:.3rem;">
+          🇪🇸 ES
+        </button>
         <button class="action-btn" title="Llamar: 96 382 55 77" onclick="window.open('tel:+34963825577')">📞</button>
         <button class="action-btn" title="WhatsApp" onclick="window.open('https://wa.me/34681376212')">💬</button>
       </div>
@@ -639,6 +647,14 @@ let userName = '';
 let conversationHistory = [];
 
 /* ─── UI helpers ──────────────────────────────────────── */
+let currentLang = 'es';
+
+function toggleLang() {
+  currentLang = currentLang === 'es' ? 'en' : 'es';
+  const btn = document.getElementById('lang-toggle');
+  btn.textContent = currentLang === 'es' ? '🇪🇸 ES' : '🇺🇸 EN';
+}
+
 function setLang(btn) {
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -748,11 +764,7 @@ async function speakText(msgId) {
     if (currentAudio === audio) { btn.textContent = '🔊 Escuchar'; return; }
   }
 
-  // Detectar idioma activo
-  const activeLang = document.querySelector('#top-lang-bar .lang-btn.active');
-  const langLabel  = activeLang ? activeLang.textContent.trim() : '🌐 Auto';
-  const langMap    = { '🇪🇸 ES': 'es', '🇺🇸 EN': 'en', '🇧🇷 PT': 'pt', '🇫🇷 FR': 'fr', '🇸🇦 AR': 'ar' };
-  const lang       = langMap[langLabel] || 'la'; // 'la' = latam neutro por defecto
+  const lang = currentLang || 'es';
 
   btn.textContent = '⏳ Cargando…';
   btn.disabled = true;
@@ -804,7 +816,7 @@ async function callProxy(userMessage) {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ system: SYSTEM_PROMPT, messages: conversationHistory })
+      body: JSON.stringify({ system: SYSTEM_PROMPT + (currentLang === 'en' ? '\n\nIMPORTANT: Respond only in English.' : '\n\nIMPORTANTE: Responde solo en español.'), messages: conversationHistory })
     });
 
     const data = await res.json();
