@@ -854,28 +854,51 @@ function addUserBubble(text) {
 function addAriaBubble(html, rawText) {
   const msgId = 'msg-' + Date.now();
   const listenLabel = T[currentLang].listenBtn;
-  const bubble = document.createElement('div');
-  bubble.className = 'bubble aria';
-  bubble.innerHTML = html +
-    '<div style="margin-top:.5rem;display:flex;align-items:center;gap:.4rem;">' +
-      '<button id="btn-' + msgId + '" onclick="speakText(\'' + msgId + '\')" style="' +
-        'background:none;border:1px solid rgba(26,122,138,.25);border-radius:100px;' +
-        'color:var(--teal);font-size:.7rem;padding:.2rem .6rem;cursor:pointer;' +
-        'display:inline-flex;align-items:center;gap:.3rem;transition:all .2s;">' +
-        listenLabel +
-      '</button>' +
-      '<audio id="audio-' + msgId + '" style="display:none;"></audio>' +
-    '</div>' +
-    '<span class="bubble-time">' + ts() + '</span>';
+
+  // Construir fila
+  const row = document.createElement('div');
+  row.className = 'msg-row';
+
   const avatar = document.createElement('div');
   avatar.className = 'msg-avatar aria';
   avatar.textContent = '🦷';
-  const row = document.createElement('div');
-  row.className = 'msg-row';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble aria';
+
+  // Contenido del mensaje
+  const content = document.createElement('div');
+  content.innerHTML = html;
+
+  // Barra de voz
+  const voiceBar = document.createElement('div');
+  voiceBar.style.cssText = 'margin-top:.5rem;display:flex;align-items:center;gap:.4rem;';
+
+  const btn = document.createElement('button');
+  btn.id = 'btn-' + msgId;
+  btn.textContent = listenLabel;
+  btn.setAttribute('onclick', "speakText('" + msgId + "')");
+  btn.style.cssText = 'background:none;border:1px solid rgba(26,122,138,.25);border-radius:100px;' +
+    'color:var(--teal);font-size:.7rem;padding:.2rem .6rem;cursor:pointer;' +
+    'display:inline-flex;align-items:center;gap:.3rem;transition:all .2s;';
+  btn.dataset.text = rawText || html.replace(/<[^>]*>/g, '');
+
+  const audio = document.createElement('audio');
+  audio.id = 'audio-' + msgId;
+  audio.style.display = 'none';
+
+  const timeEl = document.createElement('span');
+  timeEl.className = 'bubble-time';
+  timeEl.textContent = ts();
+
+  voiceBar.appendChild(btn);
+  voiceBar.appendChild(audio);
+  bubble.appendChild(content);
+  bubble.appendChild(voiceBar);
+  bubble.appendChild(timeEl);
   row.appendChild(avatar);
   row.appendChild(bubble);
-  const btn = bubble.querySelector('#btn-' + msgId);
-  btn.dataset.text = rawText || html.replace(/<[^>]*>/g,'');
+
   document.getElementById('messages').appendChild(row);
   scrollDown();
 
