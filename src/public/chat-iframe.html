@@ -853,24 +853,28 @@ function addUserBubble(text) {
 
 function addAriaBubble(html, rawText) {
   const msgId = 'msg-' + Date.now();
-  const row = make(`
-    <div class="msg-row">
-      <div class="msg-avatar aria">🦷</div>
-      <div class="bubble aria">
-        ${html}
-        <div style="margin-top:.5rem;display:flex;align-items:center;gap:.4rem;">
-          <button id="btn-${msgId}" onclick="speakText('${msgId}')" title="${T[currentLang].listenBtn}" style="
-            background:none;border:1px solid rgba(26,122,138,.25);border-radius:100px;
-            color:var(--teal);font-size:.7rem;padding:.2rem .6rem;cursor:pointer;
-            display:inline-flex;align-items:center;gap:.3rem;transition:all .2s;">
-            ${T[currentLang].listenBtn}
-          </button>
-          <audio id="audio-${msgId}" style="display:none;"></audio>
-        </div>
-        <span class="bubble-time">${ts()}</span>
-      </div>
-    </div>`);
-  const btn = row.querySelector(`#btn-${msgId}`);
+  const listenLabel = T[currentLang].listenBtn;
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble aria';
+  bubble.innerHTML = html +
+    '<div style="margin-top:.5rem;display:flex;align-items:center;gap:.4rem;">' +
+      '<button id="btn-' + msgId + '" onclick="speakText(\'' + msgId + '\')" style="' +
+        'background:none;border:1px solid rgba(26,122,138,.25);border-radius:100px;' +
+        'color:var(--teal);font-size:.7rem;padding:.2rem .6rem;cursor:pointer;' +
+        'display:inline-flex;align-items:center;gap:.3rem;transition:all .2s;">' +
+        listenLabel +
+      '</button>' +
+      '<audio id="audio-' + msgId + '" style="display:none;"></audio>' +
+    '</div>' +
+    '<span class="bubble-time">' + ts() + '</span>';
+  const avatar = document.createElement('div');
+  avatar.className = 'msg-avatar aria';
+  avatar.textContent = '🦷';
+  const row = document.createElement('div');
+  row.className = 'msg-row';
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+  const btn = bubble.querySelector('#btn-' + msgId);
   btn.dataset.text = rawText || html.replace(/<[^>]*>/g,'');
   document.getElementById('messages').appendChild(row);
   scrollDown();
