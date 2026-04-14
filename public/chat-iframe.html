@@ -811,7 +811,7 @@ function callProxy(userMessage) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      system: SYSTEM_PROMPT + '\n\n' + T[currentLang].langPrompt,
+      system: SYSTEM_PROMPT + '\n\n' + (userCity ? (currentLang === 'en' ? 'The user is connecting from: ' + userCity + '. If they ask about location or directions, acknowledge they are in ' + userCity + ' and give directions from there to the clinic.' : 'El usuario se conecta desde: ' + userCity + '. Si pregunta por ubicación o cómo llegar, menciona que está en ' + userCity + ' y dale indicaciones desde allí hasta la clínica.') : '') + '\n\n' + T[currentLang].langPrompt,
       messages: conversationHistory
     })
   })
