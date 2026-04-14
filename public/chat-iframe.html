@@ -618,7 +618,7 @@ function addUserBubble(text) {
   scrollDown();
 }
 
-function addAriaBubble(html, rawText) {
+function addAriaBubble(html, rawText, showApptBtn) {
   var msgId = 'msg-' + Date.now();
   var listenLabel = T[currentLang].listenBtn;
 
@@ -639,6 +639,20 @@ function addAriaBubble(html, rawText) {
   var content = document.createElement('div');
   content.innerHTML = html;
   bubble.appendChild(content);
+
+  // Appointment button (DOM element — never serialized to string)
+  if (showApptBtn) {
+    var apptWrap = document.createElement('div');
+    apptWrap.style.cssText = 'margin-top:.75rem;';
+    var apptB = document.createElement('button');
+    apptB.textContent = T[currentLang].openApptBtn;
+    apptB.style.cssText = 'background:linear-gradient(135deg,#1A7A8A,#22A0B2);border:none;border-radius:100px;' +
+      'color:#fff;font-family:inherit;font-size:.82rem;font-weight:600;padding:.55rem 1.2rem;cursor:pointer;' +
+      'box-shadow:0 3px 12px rgba(26,122,138,.35);display:inline-flex;align-items:center;gap:.4rem;transition:transform .15s;';
+    apptB.addEventListener('click', function(){ openModal(); });
+    apptWrap.appendChild(apptB);
+    bubble.appendChild(apptWrap);
+  }
 
   // Voice button
   var voiceBar = document.createElement('div');
@@ -672,11 +686,10 @@ function addAriaBubble(html, rawText) {
   document.getElementById('messages').appendChild(row);
   scrollDown();
 
-  // Auto-play voice (respects voiceEnabled + isSpeaking guard)
+  // Auto-play voice
   if (rawText) {
     setTimeout(function(){ speakText(msgId); }, 300);
   }
-
 }
 
 /* ── VOICE TOGGLE (Ivy-style) ────────────────────────── */
@@ -829,19 +842,7 @@ function callProxy(userMessage) {
 
     if (reply.indexOf('OPEN_APPOINTMENT_MODAL') !== -1) {
       var clean = reply.replace('OPEN_APPOINTMENT_MODAL', '').trim();
-      var apptBtn = document.createElement('div');
-      apptBtn.style.cssText = 'margin-top:.75rem;';
-      var b = document.createElement('button');
-      b.textContent = T[currentLang].openApptBtn;
-      b.onclick = openModal;
-      b.style.cssText = 'background:linear-gradient(135deg,#1A7A8A,#22A0B2);border:none;border-radius:100px;' +
-        'color:#fff;font-family:inherit;font-size:.82rem;font-weight:600;padding:.55rem 1.2rem;cursor:pointer;' +
-        'box-shadow:0 3px 12px rgba(26,122,138,.35);display:inline-flex;align-items:center;gap:.4rem;';
-      apptBtn.appendChild(b);
-      // Create a temp container to get the button HTML
-      var tmp = document.createElement('div');
-      tmp.appendChild(apptBtn);
-      addAriaBubble((clean ? md(clean) : '') + tmp.innerHTML, clean);
+      addAriaBubble(clean ? md(clean) : '', clean, true);
     } else {
       addAriaBubble(md(reply), reply);
     }
