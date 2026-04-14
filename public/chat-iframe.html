@@ -421,7 +421,7 @@ var T = {
       { label:'🏥 Seguros',      msg:'¿Aceptáis mi seguro médico?' },
       { label:'📍 Ubicación',    msg:null }
     ],
-    locationMsg:  function(city) { return city ? 'Estoy en ' + city + '. ¿Dónde está la clínica y cómo llego?' : '¿Dónde estáis y cuál es vuestro horario?'; },
+    locationMsg:  function(city) { return city ? 'Me encuentro en ' + city + '. Dime la dirección exacta de la clínica y cómo puedo llegar desde ' + city + ' hasta vosotros.' : '¿Cuál es la dirección exacta de la clínica y cuál es vuestro horario?'; },
     inputPh:      'Escribe tu consulta aquí…',
     modalTitle:   'Reservar tu Cita 📅',
     modalSub:     'Confirmaremos en menos de 2 horas al teléfono o correo que nos indiques.',
@@ -463,7 +463,7 @@ var T = {
       { label:'🏥 Insurance',        msg:'Do you accept my health insurance?' },
       { label:'📍 Location',         msg:null }
     ],
-    locationMsg:  function(city) { return city ? "I'm in " + city + '. Where is your clinic and how do I get there?' : 'Where are you located and what are your hours?'; },
+    locationMsg:  function(city) { return city ? "I'm currently in " + city + ". Please give me the exact address of your clinic and explain how I can travel from " + city + " to get there." : 'What is your exact address and what are your opening hours?'; },
     inputPh:      'Type your question here…',
     modalTitle:   'Book your Appointment 📅',
     modalSub:     'We will confirm within 2 hours by phone or email.',
@@ -811,7 +811,7 @@ function callProxy(userMessage) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      system: SYSTEM_PROMPT + '\n\n' + (userCity ? (currentLang === 'en' ? 'The user is connecting from: ' + userCity + '. If they ask about location or directions, acknowledge they are in ' + userCity + ' and give directions from there to the clinic.' : 'El usuario se conecta desde: ' + userCity + '. Si pregunta por ubicación o cómo llegar, menciona que está en ' + userCity + ' y dale indicaciones desde allí hasta la clínica.') : '') + '\n\n' + T[currentLang].langPrompt,
+      system: SYSTEM_PROMPT + '\n\n' + (userCity ? (currentLang === 'en' ? '=== USER LOCATION (detected via IP) ===\nThe user is currently in: ' + userCity + '.\nWhen asked about directions or location, you MUST:\n1. Acknowledge the user is in ' + userCity + '\n2. Give practical travel advice from ' + userCity + ' to Valencia, Spain (flight, train, etc.)\n3. Then give the clinic address: Avda. del Cid nº11, Valencia 46018\nNEVER assume the user is already in Valencia.' : '=== UBICACIÓN DEL USUARIO (detectada por IP) ===\nEl usuario se encuentra actualmente en: ' + userCity + '.\nCuando pregunte por ubicación o cómo llegar, DEBES:\n1. Reconocer que el usuario está en ' + userCity + '\n2. Indicar cómo viajar desde ' + userCity + ' hasta Valencia, España (vuelo, tren, etc. según la distancia)\n3. Luego dar la dirección de la clínica: Avda. del Cid nº11, Valencia 46018\nNUNCA asumas que el usuario ya está en Valencia.') : '') + '\n\n' + T[currentLang].langPrompt,
       messages: conversationHistory
     })
   })
