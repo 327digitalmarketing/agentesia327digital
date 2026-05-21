@@ -10,9 +10,10 @@ const supabase = createClient(
 );
 
 // ─── Seguridad: verificar que la petición viene de Retell ────────────────────
+// Retell envía tu misma RETELL_API_KEY como Bearer token en las tool calls
 function verificarRetell(req) {
   const auth = req.headers.authorization;
-  const expected = `Bearer ${process.env.RETELL_WEBHOOK_SECRET}`;
+  const expected = `Bearer ${process.env.RETELL_API_KEY}`;
   return auth && auth === expected;
 }
 
