@@ -1,2 +1,4 @@
 .env
 node_modules/
+.vercel
+api/gcal-sa.json

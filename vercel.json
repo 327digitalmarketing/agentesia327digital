@@ -1,15 +1,19 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/chat.js",     "use": "@vercel/node" },
-    { "src": "api/tts.js",      "use": "@vercel/node" },
-    { "src": "api/whatsapp.js", "use": "@vercel/node" },
-    { "src": "public/**",       "use": "@vercel/static" }
+    { "src": "api/chat.js",             "use": "@vercel/node" },
+    { "src": "api/tts.js",              "use": "@vercel/node" },
+    { "src": "api/whatsapp.js",         "use": "@vercel/node" },
+    { "src": "api/miranda.js",          "use": "@vercel/node" },
+    { "src": "api/miranda-outbound.js", "use": "@vercel/node" },
+    { "src": "public/**",               "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/api/chat",      "dest": "api/chat.js" },
-    { "src": "/api/tts",       "dest": "api/tts.js"  },
-    { "src": "/api/whatsapp",  "dest": "api/whatsapp.js" },
-    { "src": "/(.*)",     "dest": "/public/$1"   }
+    { "src": "/api/chat",                       "dest": "api/chat.js" },
+    { "src": "/api/tts",                        "dest": "api/tts.js"  },
+    { "src": "/api/whatsapp",                   "dest": "api/whatsapp.js" },
+    { "src": "/api/miranda/outbound/(.*)",       "dest": "api/miranda-outbound.js" },
+    { "src": "/api/miranda/(.*)",               "dest": "api/miranda.js" },
+    { "src": "/(.*)",                           "dest": "/public/$1"   }
   ]
 }
