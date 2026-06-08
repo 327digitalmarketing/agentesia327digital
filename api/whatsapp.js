@@ -130,33 +130,37 @@ async function sendWhatsApp(to, body) {
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
+function xmlEscape(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 module.exports = async function handler(req, res) {
   const b       = req.body || {};
   const msgBody = (b.Body || b.body || '').trim();
   const msgFrom = b.From || b.from || '';
 
-  if (msgBody && msgFrom) {
-    try {
-      const history = await getHistory(msgFrom);
-      const reply = await callGemini(msgBody, history);
+  res.setHeader('Content-Type', 'text/xml');
 
-      const newHistory = [
-        ...history,
-        { role: 'user',  parts: [{ text: msgBody }] },
-        { role: 'model', parts: [{ text: reply   }] }
-      ];
-
-      logToAirtable(msgFrom, msgBody, reply); // log opcional, fire & forget
-
-      await Promise.all([
-        sendWhatsApp(msgFrom, reply),
-        saveHistory(msgFrom, newHistory)
-      ]);
-    } catch (err) {
-      console.error('Nova error:', err);
-    }
+  if (!msgBody || !msgFrom) {
+    return res.status(200).send('<Response></Response>');
   }
 
-  res.setHeader('Content-Type', 'text/xml');
-  res.status(200).send('<Response></Response>');
+  try {
+    const history = await getHistory(msgFrom);
+    const reply   = await callGemini(msgBody, history);
+
+    const newHistory = [
+      ...history,
+      { role: 'user',  parts: [{ text: msgBody }] },
+      { role: 'model', parts: [{ text: reply   }] }
+    ];
+
+    saveHistory(msgFrom, newHistory).catch(e => console.error('KV error:', e));
+    logToAirtable(msgFrom, msgBody, reply);
+
+    return res.status(200).send(`<Response><Message>${xmlEscape(reply)}</Message></Response>`);
+  } catch (err) {
+    console.error('Nova error:', err);
+    return res.status(200).send('<Response></Response>');
+  }
 };
