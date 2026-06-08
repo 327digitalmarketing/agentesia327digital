@@ -115,11 +115,17 @@ async function callGemini(userMsg, history = []) {
 
 async function sendWhatsApp(to, body) {
   const auth = Buffer.from(`${TWILIO_SID}:${TWILIO_AUTH}`).toString('base64');
-  await fetch(`https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Messages.json`, {
+  const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Messages.json`, {
     method: 'POST',
     headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ To: to, From: TWILIO_FROM, Body: body }).toString()
   });
+  if (!r.ok) {
+    const errText = await r.text();
+    console.error('Twilio error:', r.status, errText);
+  } else {
+    console.log('Twilio OK — mensaje enviado a', to);
+  }
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
