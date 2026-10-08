@@ -240,11 +240,12 @@ async function syncToHubspot(lead, knownContactId) {
   try {
     let contactId = knownContactId || await findHubspotContactId(lead);
     if (contactId) {
-      await fetch(`https://api.hubapi.com/crm/v3/objects/contacts/${contactId}`, {
+      const res = await fetch(`https://api.hubapi.com/crm/v3/objects/contacts/${contactId}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${HUBSPOT_TOKEN}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ properties })
       });
+      if (!res.ok) console.error('HubSpot PATCH failed:', res.status, await res.text());
       return contactId;
     }
     const res = await fetch('https://api.hubapi.com/crm/v3/objects/contacts', {
@@ -253,6 +254,7 @@ async function syncToHubspot(lead, knownContactId) {
       body: JSON.stringify({ properties })
     });
     const data = await res.json();
+    if (!res.ok) console.error('HubSpot POST failed:', res.status, JSON.stringify(data));
     return data?.id || knownContactId;
   } catch (e) {
     console.error('HubSpot sync error:', e.message);
@@ -288,7 +290,9 @@ module.exports = async function handler(req, res) {
     let hubspotContactId = session.hubspotContactId;
     try {
       const lead = await extractLead(session.history, message, reply);
+      console.log('extracted lead:', JSON.stringify(lead));
       hubspotContactId = await syncToHubspot(lead, session.hubspotContactId);
+      console.log('hubspotContactId after sync:', hubspotContactId);
     } catch (e) {
       console.error('Lead extraction/sync error:', e.message);
     }
