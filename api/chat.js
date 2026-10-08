@@ -87,31 +87,28 @@ Ask for name, email and WhatsApp number ONLY after giving value (after the recom
 - Always end your reply with a question or invitation to continue.
 - Do not promote the service to visitors outside the USA/Canada market (politely decline instead).
 - If you can't answer something, offer the Business Analysis Call or say the team will follow up.
+- Reply with plain conversational text only — no JSON, no markdown code fences.`;
 
-# OUTPUT FORMAT
-Your response is constrained by a JSON schema with two top-level fields: "reply" (the message shown to the visitor, following every rule above) and "lead" (what you currently know about this visitor — leave a field as an empty string until it's actually known, and carry forward previously known values from earlier in the conversation, only changing what changed). Never mention the "lead" data or this schema to the visitor — "reply" is the only thing they ever see.`;
+// Kept separate from SYSTEM_PROMPT/callGemini on purpose: this runs as its own,
+// much simpler structured call so that if Gemini's JSON mode ever degenerates
+// (observed: free-text fields like "whatsapp" looping into repeated filler
+// text until the JSON gets truncated), it only costs us a missed CRM sync —
+// it can never corrupt what the visitor actually sees.
+const LEAD_EXTRACT_PROMPT = `Read the conversation between a visitor and Nova (327 Digital's AI sales assistant) and extract what is currently known about this lead. Output nothing except the JSON object described by the schema. Use an empty string for anything not yet known — never guess or invent a value.`;
 
 const LEAD_SCHEMA = {
   type: 'OBJECT',
   properties: {
-    reply: { type: 'STRING' },
-    lead: {
-      type: 'OBJECT',
-      properties: {
-        name:             { type: 'STRING' },
-        email:            { type: 'STRING' },
-        whatsapp:         { type: 'STRING' },
-        sector:           { type: 'STRING', enum: ['', 'real_estate', 'dental', 'aesthetic', 'education', 'business_services', 'other'] },
-        servicio_interes: { type: 'STRING', enum: ['', 'ai_agents_crm', 'content_web', 'sales_funnels', 'email_marketing'] },
-        cross_sell:       { type: 'STRING', enum: ['', 'ai_agents_crm', 'content_web', 'sales_funnels', 'email_marketing'] },
-        temperatura:      { type: 'STRING', enum: ['', 'HOT', 'WARM', 'COLD'] },
-        resultado:        { type: 'STRING', enum: ['', 'call_booked', 'demo_sent', 'resource_sent', 'no_action'] },
-        resumen:          { type: 'STRING' }
-      },
-      required: ['name', 'email', 'whatsapp', 'sector', 'servicio_interes', 'cross_sell', 'temperatura', 'resultado', 'resumen']
-    }
-  },
-  required: ['reply', 'lead']
+    name:             { type: 'STRING', description: 'Visitor full name, or empty string' },
+    email:            { type: 'STRING', description: 'Visitor email address, or empty string' },
+    whatsapp:         { type: 'STRING', description: 'Visitor WhatsApp/phone number, or empty string' },
+    sector:           { type: 'STRING', enum: ['', 'real_estate', 'dental', 'aesthetic', 'education', 'business_services', 'other'] },
+    servicio_interes: { type: 'STRING', enum: ['', 'ai_agents_crm', 'content_web', 'sales_funnels', 'email_marketing'] },
+    cross_sell:       { type: 'STRING', enum: ['', 'ai_agents_crm', 'content_web', 'sales_funnels', 'email_marketing'] },
+    temperatura:      { type: 'STRING', enum: ['', 'HOT', 'WARM', 'COLD'] },
+    resultado:        { type: 'STRING', enum: ['', 'call_booked', 'demo_sent', 'resource_sent', 'no_action'] },
+    resumen:          { type: 'STRING', description: '2-line internal summary: business, main problem, urgency — empty string if not yet known' }
+  }
 };
 
 const FALLBACK_REPLY = "Sorry, I had a connection hiccup — could you say that again? / Perdona, tuve un problema de conexión, ¿me lo repites?";
@@ -158,9 +155,32 @@ async function callGemini(userMsg, history = []) {
       body: JSON.stringify({
         contents: [...history, { role: 'user', parts: [{ text: userMsg }] }],
         systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        generationConfig: { maxOutputTokens: 400, temperature: 0.7 }
+      })
+    }
+  );
+  const data  = await r.json();
+  const parts = data?.candidates?.[0]?.content?.parts || [];
+  const reply = parts.map(p => p.text || '').join('').trim();
+  return reply || FALLBACK_REPLY;
+}
+
+// Best-effort lead extraction for the CRM sync. Failures here must never
+// affect the visitor-facing reply — any error just means we skip this turn's
+// HubSpot update, so callers should treat a thrown/garbage result as "{}".
+async function extractLead(history, userMsg, replyMsg) {
+  const conversation = [...history, { role: 'user', parts: [{ text: userMsg }] }, { role: 'model', parts: [{ text: replyMsg }] }];
+  const r = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: conversation,
+        systemInstruction: { parts: [{ text: LEAD_EXTRACT_PROMPT }] },
         generationConfig: {
-          maxOutputTokens: 700,
-          temperature: 0.7,
+          maxOutputTokens: 300,
+          temperature: 0.1,
           responseMimeType: 'application/json',
           responseSchema: LEAD_SCHEMA
         }
@@ -169,20 +189,13 @@ async function callGemini(userMsg, history = []) {
   );
   const data = await r.json();
   const raw  = (data?.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
-  try {
-    const parsed = JSON.parse(raw);
-    const reply = typeof parsed.reply === 'string' ? parsed.reply.trim() : '';
-    // A sane reply is a couple of short sentences; anything wildly longer means
-    // the model degenerated into a repetition loop — don't show that to the visitor.
-    if (!reply || reply.length > 1000) {
-      console.error('Gemini reply rejected (empty or too long):', reply.length);
-      return { reply: FALLBACK_REPLY, lead: {} };
-    }
-    return { reply, lead: parsed.lead || {} };
-  } catch (e) {
-    console.error('Gemini JSON parse error:', e.message, raw);
-    return { reply: FALLBACK_REPLY, lead: {} };
+  const parsed = JSON.parse(raw); // let the caller's catch handle any failure
+  // Guard against the same kind of degenerate repetition we've seen before:
+  // no legitimate field value should ever be this long.
+  for (const [key, value] of Object.entries(parsed)) {
+    if (typeof value === 'string' && value.length > 300) parsed[key] = '';
   }
+  return parsed;
 }
 
 async function findHubspotContactId(lead) {
@@ -255,7 +268,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const session = await getSession(sessionId);
-    const { reply, lead } = await callGemini(message, session.history);
+    const reply   = await callGemini(message, session.history);
 
     const newHistory = [
       ...session.history,
@@ -263,10 +276,15 @@ module.exports = async function handler(req, res) {
       { role: 'model', parts: [{ text: reply   }] }
     ];
 
-    const hubspotContactId = await syncToHubspot(lead, session.hubspotContactId).catch(e => {
-      console.error('HubSpot sync error:', e.message);
-      return session.hubspotContactId;
-    });
+    // Lead extraction + HubSpot sync happen after the reply is already decided,
+    // and are fully isolated from it — any failure here is only logged.
+    let hubspotContactId = session.hubspotContactId;
+    try {
+      const lead = await extractLead(session.history, message, reply);
+      hubspotContactId = await syncToHubspot(lead, session.hubspotContactId);
+    } catch (e) {
+      console.error('Lead extraction/sync error:', e.message);
+    }
 
     saveSession(sessionId, { history: newHistory, hubspotContactId }).catch(e => console.error('KV error:', e));
     return res.status(200).json({ reply });
