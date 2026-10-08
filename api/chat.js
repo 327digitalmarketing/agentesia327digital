@@ -89,22 +89,7 @@ Ask for name, email and WhatsApp number ONLY after giving value (after the recom
 - If you can't answer something, offer the Business Analysis Call or say the team will follow up.
 
 # OUTPUT FORMAT
-You must always respond with a single JSON object, no extra text, matching exactly this shape:
-{
-  "reply": "<the message shown to the visitor, following every rule above>",
-  "lead": {
-    "name": "<visitor's name if known, else empty string>",
-    "email": "<visitor's email if known, else empty string>",
-    "whatsapp": "<visitor's WhatsApp/phone number if known, else empty string>",
-    "sector": "<one of: real_estate, dental, aesthetic, education, business_services, other, or empty string if unknown>",
-    "servicio_interes": "<one of: ai_agents_crm, content_web, sales_funnels, email_marketing, or empty string if unknown>",
-    "cross_sell": "<one of: ai_agents_crm, content_web, sales_funnels, email_marketing, or empty string if unknown>",
-    "temperatura": "<HOT, WARM, COLD, or empty string if not yet determinable>",
-    "resultado": "<call_booked, demo_sent, resource_sent, no_action>",
-    "resumen": "<2-line internal summary: business, main problem, urgency — empty string if not yet known>"
-  }
-}
-Keep every "lead" field consistent with everything learned so far in the conversation (carry forward previously known values, only update what changed). Never mention this JSON structure or its fields to the visitor — "reply" is the only thing they ever see.`;
+Your response is constrained by a JSON schema with two top-level fields: "reply" (the message shown to the visitor, following every rule above) and "lead" (what you currently know about this visitor — leave a field as an empty string until it's actually known, and carry forward previously known values from earlier in the conversation, only changing what changed). Never mention the "lead" data or this schema to the visitor — "reply" is the only thing they ever see.`;
 
 const LEAD_SCHEMA = {
   type: 'OBJECT',
@@ -116,17 +101,20 @@ const LEAD_SCHEMA = {
         name:             { type: 'STRING' },
         email:            { type: 'STRING' },
         whatsapp:         { type: 'STRING' },
-        sector:           { type: 'STRING' },
-        servicio_interes: { type: 'STRING' },
-        cross_sell:       { type: 'STRING' },
-        temperatura:      { type: 'STRING' },
-        resultado:        { type: 'STRING' },
+        sector:           { type: 'STRING', enum: ['', 'real_estate', 'dental', 'aesthetic', 'education', 'business_services', 'other'] },
+        servicio_interes: { type: 'STRING', enum: ['', 'ai_agents_crm', 'content_web', 'sales_funnels', 'email_marketing'] },
+        cross_sell:       { type: 'STRING', enum: ['', 'ai_agents_crm', 'content_web', 'sales_funnels', 'email_marketing'] },
+        temperatura:      { type: 'STRING', enum: ['', 'HOT', 'WARM', 'COLD'] },
+        resultado:        { type: 'STRING', enum: ['', 'call_booked', 'demo_sent', 'resource_sent', 'no_action'] },
         resumen:          { type: 'STRING' }
-      }
+      },
+      required: ['name', 'email', 'whatsapp', 'sector', 'servicio_interes', 'cross_sell', 'temperatura', 'resultado', 'resumen']
     }
   },
-  required: ['reply']
+  required: ['reply', 'lead']
 };
+
+const FALLBACK_REPLY = "Sorry, I had a connection hiccup — could you say that again? / Perdona, tuve un problema de conexión, ¿me lo repites?";
 
 async function getSession(sessionId) {
   const empty = { history: [], hubspotContactId: null };
@@ -183,13 +171,17 @@ async function callGemini(userMsg, history = []) {
   const raw  = (data?.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
   try {
     const parsed = JSON.parse(raw);
-    return {
-      reply: parsed.reply || '¿En qué más puedo ayudarte?',
-      lead: parsed.lead || {}
-    };
+    const reply = typeof parsed.reply === 'string' ? parsed.reply.trim() : '';
+    // A sane reply is a couple of short sentences; anything wildly longer means
+    // the model degenerated into a repetition loop — don't show that to the visitor.
+    if (!reply || reply.length > 1000) {
+      console.error('Gemini reply rejected (empty or too long):', reply.length);
+      return { reply: FALLBACK_REPLY, lead: {} };
+    }
+    return { reply, lead: parsed.lead || {} };
   } catch (e) {
     console.error('Gemini JSON parse error:', e.message, raw);
-    return { reply: raw || '¿En qué más puedo ayudarte?', lead: {} };
+    return { reply: FALLBACK_REPLY, lead: {} };
   }
 }
 
