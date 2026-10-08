@@ -155,7 +155,7 @@ async function callGemini(userMsg, history = []) {
       body: JSON.stringify({
         contents: [...history, { role: 'user', parts: [{ text: userMsg }] }],
         systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        generationConfig: { maxOutputTokens: 400, temperature: 0.7 }
+        generationConfig: { maxOutputTokens: 600, temperature: 0.7, thinkingConfig: { thinkingBudget: 0 } }
       })
     }
   );
@@ -182,7 +182,8 @@ async function extractLead(history, userMsg, replyMsg) {
           maxOutputTokens: 300,
           temperature: 0.1,
           responseMimeType: 'application/json',
-          responseSchema: LEAD_SCHEMA
+          responseSchema: LEAD_SCHEMA,
+          thinkingConfig: { thinkingBudget: 0 }
         }
       })
     }
