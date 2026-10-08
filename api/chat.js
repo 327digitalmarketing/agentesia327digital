@@ -194,7 +194,7 @@ async function extractLead(history, userMsg, replyMsg) {
   try {
     parsed = JSON.parse(raw);
   } catch (e) {
-    console.error('extractLead JSON parse failed. finishReason:', data?.candidates?.[0]?.finishReason, 'len:', raw.length);
+    console.error('extractLead JSON parse failed. finishReason:', data?.candidates?.[0]?.finishReason, 'len:', raw.length, 'raw data:', JSON.stringify(data).slice(0, 1500));
     throw e; // let the caller's catch skip this turn's sync
   }
   // Guard against the same kind of degenerate repetition we've seen before:
