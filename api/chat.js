@@ -290,9 +290,7 @@ module.exports = async function handler(req, res) {
     let hubspotContactId = session.hubspotContactId;
     try {
       const lead = await extractLead(session.history, message, reply);
-      console.log('extracted lead:', JSON.stringify(lead));
       hubspotContactId = await syncToHubspot(lead, session.hubspotContactId);
-      console.log('hubspotContactId after sync:', hubspotContactId);
     } catch (e) {
       console.error('Lead extraction/sync error:', e.message);
     }
