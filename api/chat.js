@@ -102,11 +102,11 @@ const LEAD_SCHEMA = {
     name:             { type: 'STRING', description: 'Visitor full name, or empty string' },
     email:            { type: 'STRING', description: 'Visitor email address, or empty string' },
     whatsapp:         { type: 'STRING', description: 'Visitor WhatsApp/phone number, or empty string' },
-    sector:           { type: 'STRING', enum: ['', 'real_estate', 'dental', 'aesthetic', 'education', 'business_services', 'other'] },
-    servicio_interes: { type: 'STRING', enum: ['', 'ai_agents_crm', 'content_web', 'sales_funnels', 'email_marketing'] },
-    cross_sell:       { type: 'STRING', enum: ['', 'ai_agents_crm', 'content_web', 'sales_funnels', 'email_marketing'] },
-    temperatura:      { type: 'STRING', enum: ['', 'HOT', 'WARM', 'COLD'] },
-    resultado:        { type: 'STRING', enum: ['', 'call_booked', 'demo_sent', 'resource_sent', 'no_action'] },
+    sector:           { type: 'STRING', description: 'Omit this field entirely if not yet known.', enum: ['real_estate', 'dental', 'aesthetic', 'education', 'business_services', 'other'] },
+    servicio_interes: { type: 'STRING', description: 'Omit this field entirely if not yet known.', enum: ['ai_agents_crm', 'content_web', 'sales_funnels', 'email_marketing'] },
+    cross_sell:       { type: 'STRING', description: 'Omit this field entirely if not yet known.', enum: ['ai_agents_crm', 'content_web', 'sales_funnels', 'email_marketing'] },
+    temperatura:      { type: 'STRING', description: 'Omit this field entirely if not yet determinable.', enum: ['HOT', 'WARM', 'COLD'] },
+    resultado:        { type: 'STRING', description: 'Omit this field entirely if there is no outcome yet.', enum: ['call_booked', 'demo_sent', 'resource_sent', 'no_action'] },
     resumen:          { type: 'STRING', description: '2-line internal summary: business, main problem, urgency — empty string if not yet known' }
   }
 };
