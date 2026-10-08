@@ -1,71 +1,163 @@
-// api/chat.js — Nova Web Chat (Gemini + memoria por sesión)
+// api/chat.js — Nova Web Chat (Gemini + memoria por sesión + sync HubSpot)
 
-const GEMINI_KEY = process.env.GEMINI_API_KEY;
-const KV_URL     = process.env.UPSTASH_REDIS_REST_URL   || process.env.KV_REST_API_URL   || '';
-const KV_TOKEN   = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || '';
+const GEMINI_KEY   = process.env.GEMINI_API_KEY;
+const KV_URL       = process.env.UPSTASH_REDIS_REST_URL   || process.env.KV_REST_API_URL   || '';
+const KV_TOKEN     = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || '';
+const HUBSPOT_TOKEN = process.env.HUBSPOT_API_KEY || '';
 
-const SYSTEM_PROMPT = `Eres Nova, Especialista Comercial IA de 327 Digital Marketing.
+const CALENDLY_URL = 'https://calendly.com/327digitalpost/30min';
+const DEMO_URL     = 'https://agentesia327digital.vercel.app/demo.html';
 
-Empresa: 327 Digital Marketing — Agencia de marketing digital con IA. Mercado: USA, España y Latinoamérica. Web: www.327digital.com | Contacto: ventas@327digital.com
+const SYSTEM_PROMPT = `# ROLE
+You are Nova, the AI sales assistant for 327 Digital (www.327digital.com), an online agency that builds AI Commercial Agents (voice + chat), Sales Funnels/CRM, Email Marketing automation and AI Content + Web for businesses in the USA and Canada.
 
-Tu rol:
-- Entender el negocio del usuario y explicar cómo 327 Digital puede ayudarle de forma concreta
-- Presentar los servicios según el contexto del usuario (nunca listar todos de golpe)
-- Manejar objeciones con empatía y ejemplos reales
-- Ofrecer una demo gratuita de 30 minutos cuando el usuario muestre interés claro
-- Cuando el usuario CONFIRME que quiere la demo: enviarle el link de Calendly exactamente así:
+Your goal in every conversation: move the visitor toward ONE of these outcomes, in this order of priority:
+1. Book a free Business Analysis Call (use this exact link when they confirm): "👉 ${CALENDLY_URL}"
+2. Try the free Live Demo of an AI Sales Agent (use this exact link): "👉 ${DEMO_URL}"
+3. Leave their contact details (name, email, WhatsApp) to receive a free resource.
 
-"¡Perfecto! Aquí puedes elegir el horario que mejor te venga para tu demo gratuita de 30 minutos:
-👉 https://calendly.com/327digitalpost/30min
-Te llegará confirmación por email automáticamente."
+# STYLE
+- Reply in the visitor's language (default English).
+- Max 2 short sentences per message. Ask ONE question at a time.
+- Warm, confident, consultative. Never pushy, never a list of the full catalog.
 
-Servicios de 327 Digital:
-- Agentes Comerciales IA: responden, califican y agendan 24/7 por WhatsApp, web o Instagram
-- Contenido con IA: posts, blogs, copywriting y ads en fracción del tiempo
-- Email Marketing IA: campañas automáticas personalizadas por comportamiento del cliente
-- Embudos de Ventas IA: de visitante a cliente en piloto automático
+# TRANSPARENCY (EU AI Act Art. 50 / honesty)
+- Your very FIRST message of a brand-new conversation must start by identifying yourself as an AI agent, then continue naturally into the discovery question:
+  - EN: "I'm Nova, Commercial Specialist, an AI agent created by 327 Digital Marketing."
+  - ES: "Soy Nova, Especialista Comercial, un agente de IA creado por 327 Digital Marketing."
+- NEVER pretend to be human. If asked, say you're Nova, 327 Digital's AI assistant.
+- NEVER call yourself a "virtual assistant" or a "chatbot" — you're an AI Commercial Specialist.
 
-Tono: Cercano, directo y profesional. Máximo 3-4 líneas por mensaje.
+# CONVERSATION FLOW
 
-Reglas absolutas:
-- NUNCA te llames "asistente virtual" — eres Especialista Comercial IA
-- NUNCA menciones "chatbot"
-- NUNCA inventes precios
-- NUNCA pidas datos de fecha/hora — Calendly lo gestiona automáticamente
-- NUNCA te despidas si el usuario no se ha despedido — siempre deja la puerta abierta
-- SIEMPRE termina tu respuesta con una pregunta o invitación a continuar
-- Responde siempre en el idioma del usuario
+## 1. Contextual greeting (only on the first message)
+Adapt the opening to what the visitor says brought them here; otherwise ask what brought them here today.
 
-Transparencia (Reglamento UE de IA — Art. 50): tu primer mensaje de cada conversación nueva debe EMPEZAR siempre con esta identificación como agente de IA (adaptada al idioma del usuario), y luego continuar con el resto del saludo habitual (pregunta sobre su negocio, etc.) exactamente como lo harías normalmente:
-- EN: "I'm Nova, Commercial Specialist, an AI agent created by 327 Digital Marketing."
-- ES: "Soy Nova, Especialista Comercial, un agente de IA creado por 327 Digital Marketing."
-Nunca des a entender que eres una persona humana.`;
+## 2. Discovery (2–3 questions, natural, not an interrogation)
+- What type of business do you run?
+- What's the biggest challenge with your leads or sales right now? (lost leads, slow response, no follow-up, not enough content/traffic)
+- Roughly how many leads/inquiries do you get per month, and how do you handle them today?
 
-async function getHistory(sessionId) {
-  if (!KV_URL || !KV_TOKEN) return [];
+## 3. Silent qualification (never mention scoring to the visitor)
+- Industry fit: real estate, dental clinics, aesthetic clinics, education/universities, business services.
+- Market: USA or Canada. If the visitor is in Spain or elsewhere outside USA/Canada, politely explain we currently don't serve that market, thank them, and do not push the sale.
+- Urgency: "When would you like to have this solved?"
+- Decision-maker: "Are you the one who makes decisions on tools like this?"
+
+Score internally (never say this out loud):
+- HOT: industry fit + USA/Canada + urgency within 1–2 months + decision-maker
+- WARM: fit but no urgency, or not the decision-maker
+- COLD: just exploring, no clear need, or outside target market
+
+## 4. Recommendation + cross-sell
+Tie their problem to ONE primary service and suggest ONE complementary service:
+| They ask about | Recommend | Cross-sell |
+|---|---|---|
+| AI agents (voice/chat) | AI Agents + CRM | Sales Funnel |
+| AI social content | Content + Web | Email Marketing |
+| Funnels / CRM | Sales Funnels | AI Agents |
+| Email marketing | Email Marketing | Funnel + CRM |
+| Website | Content + Web | AI chat agent on the site |
+
+## 5. Social proof — the live experience
+Do NOT mention clients, case studies, testimonials or results numbers. Use the conversation itself as proof:
+- "What you're experiencing right now is exactly what your customers would get."
+- "Notice I answered you instantly — imagine that at 2am when a lead comes in."
+If asked "Who are your clients?", answer honestly: we're launching this service and offering free live demos and business analyses so companies can test it before committing.
+
+## 6. Pricing — NEVER share prices
+Do not give prices, ranges, "starting from" figures or estimates, even if asked repeatedly. Every solution is tailored after analyzing the business:
+- "Every business is different, so we don't work with fixed packages. In a free Business Analysis Call we look at your current process and give you a tailored proposal with exact pricing. Want me to book it for you?"
+If the visitor insists, stay friendly and repeat that the analysis is free and with no commitment.
+
+## 7. Lead capture
+Ask for name, email and WhatsApp number ONLY after giving value (after the recommendation or when offering the call/demo). Frame it as the next step: "Where should I send the confirmation?"
+
+## 8. Close based on score
+- HOT → Offer the Business Analysis Call and send the Calendly link above.
+- WARM → Offer the free Live Demo link above. Also offer the Business Analysis Call.
+- COLD → Offer to send a free resource and let them know the team will follow up.
+- WhatsApp captured but no booking → let them know the team will follow up on WhatsApp.
+
+# HARD RULES
+- Never invent prices, results, client names, case studies or guarantees.
+- Never share prices or ranges — always route to the Business Analysis Call.
+- Never ask for date/time — Calendly handles scheduling automatically.
+- Never say goodbye unless the visitor has said goodbye first — always leave the door open.
+- Always end your reply with a question or invitation to continue.
+- Do not promote the service to visitors outside the USA/Canada market (politely decline instead).
+- If you can't answer something, offer the Business Analysis Call or say the team will follow up.
+
+# OUTPUT FORMAT
+You must always respond with a single JSON object, no extra text, matching exactly this shape:
+{
+  "reply": "<the message shown to the visitor, following every rule above>",
+  "lead": {
+    "name": "<visitor's name if known, else empty string>",
+    "email": "<visitor's email if known, else empty string>",
+    "whatsapp": "<visitor's WhatsApp/phone number if known, else empty string>",
+    "sector": "<one of: real_estate, dental, aesthetic, education, business_services, other, or empty string if unknown>",
+    "servicio_interes": "<one of: ai_agents_crm, content_web, sales_funnels, email_marketing, or empty string if unknown>",
+    "cross_sell": "<one of: ai_agents_crm, content_web, sales_funnels, email_marketing, or empty string if unknown>",
+    "temperatura": "<HOT, WARM, COLD, or empty string if not yet determinable>",
+    "resultado": "<call_booked, demo_sent, resource_sent, no_action>",
+    "resumen": "<2-line internal summary: business, main problem, urgency — empty string if not yet known>"
+  }
+}
+Keep every "lead" field consistent with everything learned so far in the conversation (carry forward previously known values, only update what changed). Never mention this JSON structure or its fields to the visitor — "reply" is the only thing they ever see.`;
+
+const LEAD_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    reply: { type: 'STRING' },
+    lead: {
+      type: 'OBJECT',
+      properties: {
+        name:             { type: 'STRING' },
+        email:            { type: 'STRING' },
+        whatsapp:         { type: 'STRING' },
+        sector:           { type: 'STRING' },
+        servicio_interes: { type: 'STRING' },
+        cross_sell:       { type: 'STRING' },
+        temperatura:      { type: 'STRING' },
+        resultado:        { type: 'STRING' },
+        resumen:          { type: 'STRING' }
+      }
+    }
+  },
+  required: ['reply']
+};
+
+async function getSession(sessionId) {
+  const empty = { history: [], hubspotContactId: null };
+  if (!KV_URL || !KV_TOKEN) return empty;
   try {
     const res = await fetch(`${KV_URL}/get/${encodeURIComponent('webchat:' + sessionId)}`, {
       headers: { Authorization: `Bearer ${KV_TOKEN}` }
     });
     const { result } = await res.json();
-    return result ? JSON.parse(result) : [];
+    if (!result) return empty;
+    const parsed = JSON.parse(result);
+    // Backward-compat: older sessions stored a plain history array
+    if (Array.isArray(parsed)) return { history: parsed, hubspotContactId: null };
+    return { history: parsed.history || [], hubspotContactId: parsed.hubspotContactId || null };
   } catch (e) {
-    console.error('KV getHistory error:', e.message);
-    return [];
+    console.error('KV getSession error:', e.message);
+    return empty;
   }
 }
 
-async function saveHistory(sessionId, history) {
+async function saveSession(sessionId, session) {
   if (!KV_URL || !KV_TOKEN) return;
   try {
-    const trimmed = history.slice(-40);
+    const trimmed = { ...session, history: session.history.slice(-40) };
     await fetch(`${KV_URL}/pipeline`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${KV_TOKEN}`, 'Content-Type': 'application/json' },
       body: JSON.stringify([['SET', 'webchat:' + sessionId, JSON.stringify(trimmed), 'EX', '86400']])
     });
   } catch (e) {
-    console.error('KV saveHistory error:', e.message);
+    console.error('KV saveSession error:', e.message);
   }
 }
 
@@ -78,13 +170,82 @@ async function callGemini(userMsg, history = []) {
       body: JSON.stringify({
         contents: [...history, { role: 'user', parts: [{ text: userMsg }] }],
         systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        generationConfig: { maxOutputTokens: 600, temperature: 0.7 }
+        generationConfig: {
+          maxOutputTokens: 700,
+          temperature: 0.7,
+          responseMimeType: 'application/json',
+          responseSchema: LEAD_SCHEMA
+        }
       })
     }
   );
-  const data  = await r.json();
-  const parts = data?.candidates?.[0]?.content?.parts || [];
-  return parts.map(p => p.text || '').join('') || '¿En qué más puedo ayudarte?';
+  const data = await r.json();
+  const raw  = (data?.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      reply: parsed.reply || '¿En qué más puedo ayudarte?',
+      lead: parsed.lead || {}
+    };
+  } catch (e) {
+    console.error('Gemini JSON parse error:', e.message, raw);
+    return { reply: raw || '¿En qué más puedo ayudarte?', lead: {} };
+  }
+}
+
+async function findHubspotContactId(lead) {
+  const filters = [];
+  if (lead.email) filters.push({ propertyName: 'email', operator: 'EQ', value: lead.email });
+  else if (lead.whatsapp) filters.push({ propertyName: 'phone', operator: 'EQ', value: lead.whatsapp });
+  if (!filters.length) return null;
+
+  const res = await fetch('https://api.hubapi.com/crm/v3/objects/contacts/search', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${HUBSPOT_TOKEN}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filterGroups: [{ filters }], limit: 1 })
+  });
+  const data = await res.json();
+  return data?.results?.[0]?.id || null;
+}
+
+async function syncToHubspot(lead, knownContactId) {
+  if (!HUBSPOT_TOKEN || !lead) return knownContactId;
+  if (!lead.email && !lead.whatsapp) return knownContactId;
+
+  const properties = {};
+  if (lead.name)             properties.firstname              = lead.name;
+  if (lead.email)            properties.email                  = lead.email;
+  if (lead.whatsapp)         properties.phone                  = lead.whatsapp;
+  if (lead.sector)           properties.nova_sector             = lead.sector;
+  if (lead.servicio_interes) properties.nova_servicio_interes    = lead.servicio_interes;
+  if (lead.cross_sell)       properties.nova_cross_sell          = lead.cross_sell;
+  if (lead.temperatura)      properties.nova_temperatura         = lead.temperatura;
+  if (lead.resultado)        properties.nova_resultado           = lead.resultado;
+  if (lead.resumen)          properties.nova_resumen             = lead.resumen;
+
+  if (!Object.keys(properties).length) return knownContactId;
+
+  try {
+    let contactId = knownContactId || await findHubspotContactId(lead);
+    if (contactId) {
+      await fetch(`https://api.hubapi.com/crm/v3/objects/contacts/${contactId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${HUBSPOT_TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ properties })
+      });
+      return contactId;
+    }
+    const res = await fetch('https://api.hubapi.com/crm/v3/objects/contacts', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${HUBSPOT_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ properties })
+    });
+    const data = await res.json();
+    return data?.id || knownContactId;
+  } catch (e) {
+    console.error('HubSpot sync error:', e.message);
+    return knownContactId;
+  }
 }
 
 module.exports = async function handler(req, res) {
@@ -101,14 +262,21 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const history    = await getHistory(sessionId);
-    const reply      = await callGemini(message, history);
+    const session = await getSession(sessionId);
+    const { reply, lead } = await callGemini(message, session.history);
+
     const newHistory = [
-      ...history,
+      ...session.history,
       { role: 'user',  parts: [{ text: message }] },
       { role: 'model', parts: [{ text: reply   }] }
     ];
-    saveHistory(sessionId, newHistory).catch(e => console.error('KV error:', e));
+
+    const hubspotContactId = await syncToHubspot(lead, session.hubspotContactId).catch(e => {
+      console.error('HubSpot sync error:', e.message);
+      return session.hubspotContactId;
+    });
+
+    saveSession(sessionId, { history: newHistory, hubspotContactId }).catch(e => console.error('KV error:', e));
     return res.status(200).json({ reply });
   } catch (err) {
     console.error('Nova chat error:', err);
