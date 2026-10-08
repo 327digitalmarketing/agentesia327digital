@@ -179,7 +179,7 @@ async function extractLead(history, userMsg, replyMsg) {
         contents: conversation,
         systemInstruction: { parts: [{ text: LEAD_EXTRACT_PROMPT }] },
         generationConfig: {
-          maxOutputTokens: 300,
+          maxOutputTokens: 500,
           temperature: 0.1,
           responseMimeType: 'application/json',
           responseSchema: LEAD_SCHEMA,
@@ -190,7 +190,13 @@ async function extractLead(history, userMsg, replyMsg) {
   );
   const data = await r.json();
   const raw  = (data?.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
-  const parsed = JSON.parse(raw); // let the caller's catch handle any failure
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    console.error('extractLead JSON parse failed. finishReason:', data?.candidates?.[0]?.finishReason, 'len:', raw.length);
+    throw e; // let the caller's catch skip this turn's sync
+  }
   // Guard against the same kind of degenerate repetition we've seen before:
   // no legitimate field value should ever be this long.
   for (const [key, value] of Object.entries(parsed)) {
